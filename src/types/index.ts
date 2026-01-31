@@ -96,5 +96,5 @@ export const roleErrorMessages: Record<PlanRole, string> = {
   viewer: 'You need at least viewer access',
 };
 
-export * from './note';
-export * from './member';
+export * from "@/types/member";
+export * from "@/types/note";

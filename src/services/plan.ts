@@ -1,6 +1,15 @@
-import { eq, or, sql, desc, and, count } from 'drizzle-orm';
-import { db, planTable, planMemberTable, noteTable, userTable } from '../db';
-import type { CreatePlanInput, PlanDetails, PlanMember, PlanNote, PlanRole, PlanWithRole, UpdatePlanInput } from '../types';
+import { and, count, desc, eq, or, sql } from "drizzle-orm";
+
+import { db, noteTable, planMemberTable, planTable, userTable } from "@/db";
+import type {
+  CreatePlanInput,
+  PlanDetails,
+  PlanMember,
+  PlanNote,
+  PlanRole,
+  PlanWithRole,
+  UpdatePlanInput,
+} from "@/types";
 
 export const planService = {
   /**

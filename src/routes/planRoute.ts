@@ -1,20 +1,21 @@
 import { Hono } from "hono";
+
+import { NotFoundError } from "@/lib/errors";
+import { validated } from "@/lib/validation";
 import {
   authMiddleware,
-  requireAuth,
-  type AuthVariables,
   planAccessMiddleware,
+  requireAuth,
   requireRole,
-} from "../middlewares";
-import { planService } from "../services";
+  type AuthVariables,
+} from "@/middlewares";
+import { planService } from "@/services";
 import {
-  listQuerySchema,
   createPlanSchema,
-  updatePlanSchema,
   idParamSchema,
-} from "../types";
-import { validated } from "../lib/validation";
-import { NotFoundError } from "../lib/errors";
+  listQuerySchema,
+  updatePlanSchema,
+} from "@/types";
 
 export const planRoute = new Hono<{ Variables: AuthVariables }>()
   .use(authMiddleware)

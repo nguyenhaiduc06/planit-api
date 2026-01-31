@@ -1,7 +1,8 @@
-import { Hono } from 'hono'
-import { auth } from './lib/auth'
-import { AppError } from './lib/errors'
-import { planRoute, noteRoute } from './routes'
+import { Hono } from "hono";
+
+import { auth } from "@/lib/auth";
+import { AppError } from "@/lib/errors";
+import { planRoute, noteRoute } from "@/routes";
 
 const app = new Hono()
 

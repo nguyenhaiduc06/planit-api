@@ -1,7 +1,7 @@
 import { createMiddleware } from "hono/factory";
-import { auth } from "../lib/auth";
-import type { AuthType } from "../lib/auth";
-import { UnauthorizedError } from "../lib/errors";
+
+import { auth, type AuthType } from "@/lib/auth";
+import { UnauthorizedError } from "@/lib/errors";
 
 export type AuthVariables = {
   user: AuthType["user"];

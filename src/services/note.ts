@@ -1,6 +1,13 @@
-import { eq, desc, and, count } from 'drizzle-orm';
-import { db, noteTable } from '../db';
-import type { CreateNoteInput, UpdateNoteInput, NoteType, Note, NoteWithPlan } from '../types';
+import { and, count, desc, eq } from "drizzle-orm";
+
+import { db, noteTable } from "@/db";
+import type {
+  CreateNoteInput,
+  Note,
+  NoteType,
+  NoteWithPlan,
+  UpdateNoteInput,
+} from "@/types";
 
 
 export const noteService = {

@@ -1,2 +1,3 @@
-export * from './authMiddleware';
-export * from './planAccess';
+export * from "@/middlewares/authMiddleware";
+export * from "@/middlewares/noteAccess";
+export * from "@/middlewares/planAccess";

@@ -1,7 +1,12 @@
-import type { Context, Next } from 'hono';
-import { planService } from '../services/plan';
-import { NotFoundError, ForbiddenError, ConfigurationError } from '../lib/errors';
-import { roleHierarchy, roleErrorMessages, type PlanRole } from '../types';
+import type { Context, Next } from "hono";
+
+import {
+  ConfigurationError,
+  ForbiddenError,
+  NotFoundError,
+} from "@/lib/errors";
+import { planService } from "@/services/plan";
+import { roleErrorMessages, roleHierarchy, type PlanRole } from "@/types";
 
 // Plan context attached after planAccessMiddleware runs
 export interface PlanContext {

@@ -8,7 +8,8 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
-import { userTable } from "./auth-schema";
+
+import { userTable } from "@/db/auth-schema";
 
 // -----------------------------------------------------------------------------
 // Plan

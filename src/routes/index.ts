@@ -1,2 +1,3 @@
-export * from './planRoute';
-export * from './noteRoute';
+export * from "@/routes/memberRoute";
+export * from "@/routes/noteRoute";
+export * from "@/routes/planRoute";

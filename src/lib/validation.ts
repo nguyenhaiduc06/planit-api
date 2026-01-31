@@ -1,6 +1,7 @@
 import { zValidator } from "@hono/zod-validator";
 import { flattenError } from "zod";
-import { ValidationError } from "./errors";
+
+import { ValidationError } from "@/lib/errors";
 
 /**
  * Maps a Zod error to the ValidationError details shape and throws.
