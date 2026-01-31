@@ -73,3 +73,28 @@ export interface AuthSession {
   token: string;
   expiresAt: Date;
 }
+
+/**
+ * Role hierarchy for permission checks.
+ * Higher number = more permissions.
+ * - owner (3): Full access, can delete plan and manage members
+ * - editor (2): Can create/edit notes and plan details
+ * - viewer (1): Read-only access
+ */
+export const roleHierarchy: Record<PlanRole, number> = {
+  owner: 3,
+  editor: 2,
+  viewer: 1,
+};
+
+/**
+ * Role-specific error messages for permission denials
+ */
+export const roleErrorMessages: Record<PlanRole, string> = {
+  owner: 'Only the owner can perform this action',
+  editor: 'Viewers cannot perform this action',
+  viewer: 'You need at least viewer access',
+};
+
+export * from './note';
+export * from './member';
