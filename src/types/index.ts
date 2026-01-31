@@ -41,7 +41,7 @@ export const listQuerySchema = z.object({
 export type ListQueryInput = z.infer<typeof listQuerySchema>;
 
 export const idParamSchema = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
 });
 
 export const createPlanSchema = z.object({
