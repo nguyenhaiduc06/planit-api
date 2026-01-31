@@ -8,19 +8,19 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
-import { user } from "./auth-schema";
+import { userTable } from "./auth-schema";
 
 // -----------------------------------------------------------------------------
 // Plan
 // -----------------------------------------------------------------------------
 
-export const plan = pgTable(
+export const planTable = pgTable(
   "plan",
   {
     id: uuid("id").defaultRandom().primaryKey(),
     userId: text("user_id")
       .notNull()
-      .references(() => user.id, { onDelete: "cascade" }),
+      .references(() => userTable.id, { onDelete: "cascade" }),
     title: text("title").notNull(),
     description: text("description"),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -43,16 +43,16 @@ export const plan = pgTable(
 
 export const noteTypeEnum = ["text", "todo", "calendar", "location"] as const;
 
-export const note = pgTable(
+export const noteTable = pgTable(
   "note",
   {
     id: uuid("id").defaultRandom().primaryKey(),
     planId: uuid("plan_id")
       .notNull()
-      .references(() => plan.id, { onDelete: "cascade" }),
+      .references(() => planTable.id, { onDelete: "cascade" }),
     userId: text("user_id")
       .notNull()
-      .references(() => user.id, { onDelete: "cascade" }),
+      .references(() => userTable.id, { onDelete: "cascade" }),
     type: text("type", { enum: noteTypeEnum }).notNull(),
     content: jsonb("content").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -76,16 +76,16 @@ export const note = pgTable(
 
 export const planMemberRoleEnum = ["owner", "editor", "viewer"] as const;
 
-export const planMember = pgTable(
+export const planMemberTable = pgTable(
   "plan_member",
   {
     id: uuid("id").defaultRandom().primaryKey(),
     planId: uuid("plan_id")
       .notNull()
-      .references(() => plan.id, { onDelete: "cascade" }),
+      .references(() => planTable.id, { onDelete: "cascade" }),
     userId: text("user_id")
       .notNull()
-      .references(() => user.id, { onDelete: "cascade" }),
+      .references(() => userTable.id, { onDelete: "cascade" }),
     role: text("role", { enum: planMemberRoleEnum }).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
@@ -102,18 +102,18 @@ export const planMember = pgTable(
 
 export const pendingInvitationRoleEnum = ["editor", "viewer"] as const;
 
-export const pendingInvitation = pgTable(
+export const pendingInvitationTable = pgTable(
   "pending_invitation",
   {
     id: uuid("id").defaultRandom().primaryKey(),
     planId: uuid("plan_id")
       .notNull()
-      .references(() => plan.id, { onDelete: "cascade" }),
+      .references(() => planTable.id, { onDelete: "cascade" }),
     email: text("email").notNull(),
     role: text("role", { enum: pendingInvitationRoleEnum }).notNull(),
     invitedBy: text("invited_by")
       .notNull()
-      .references(() => user.id, { onDelete: "cascade" }),
+      .references(() => userTable.id, { onDelete: "cascade" }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -128,48 +128,48 @@ export const pendingInvitation = pgTable(
 // Relations
 // -----------------------------------------------------------------------------
 
-export const planRelations = relations(plan, ({ one, many }) => ({
-  user: one(user, {
-    fields: [plan.userId],
-    references: [user.id],
+export const planRelations = relations(planTable, ({ one, many }) => ({
+  user: one(userTable, {
+    fields: [planTable.userId],
+    references: [userTable.id],
   }),
-  notes: many(note),
-  planMembers: many(planMember),
-  pendingInvitations: many(pendingInvitation),
+  notes: many(noteTable),
+  planMembers: many(planMemberTable),
+  pendingInvitations: many(pendingInvitationTable),
 }));
 
-export const noteRelations = relations(note, ({ one }) => ({
-  plan: one(plan, {
-    fields: [note.planId],
-    references: [plan.id],
+export const noteRelations = relations(noteTable, ({ one }) => ({
+  plan: one(planTable, {
+    fields: [noteTable.planId],
+    references: [planTable.id],
   }),
-  user: one(user, {
-    fields: [note.userId],
-    references: [user.id],
+  user: one(userTable, {
+    fields: [noteTable.userId],
+    references: [userTable.id],
   }),
 }));
 
-export const planMemberRelations = relations(planMember, ({ one }) => ({
-  plan: one(plan, {
-    fields: [planMember.planId],
-    references: [plan.id],
+export const planMemberRelations = relations(planMemberTable, ({ one }) => ({
+  plan: one(planTable, {
+    fields: [planMemberTable.planId],
+    references: [planTable.id],
   }),
-  user: one(user, {
-    fields: [planMember.userId],
-    references: [user.id],
+  user: one(userTable, {
+    fields: [planMemberTable.userId],
+    references: [userTable.id],
   }),
 }));
 
 export const pendingInvitationRelations = relations(
-  pendingInvitation,
+  pendingInvitationTable,
   ({ one }) => ({
-    plan: one(plan, {
-      fields: [pendingInvitation.planId],
-      references: [plan.id],
+    plan: one(planTable, {
+      fields: [pendingInvitationTable.planId],
+      references: [planTable.id],
     }),
-    inviter: one(user, {
-      fields: [pendingInvitation.invitedBy],
-      references: [user.id],
+    inviter: one(userTable, {
+      fields: [pendingInvitationTable.invitedBy],
+      references: [userTable.id],
     }),
   })
 );

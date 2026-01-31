@@ -1,18 +1,26 @@
-import { betterAuth } from 'better-auth'
-import { drizzleAdapter } from 'better-auth/adapters/drizzle'
+import { betterAuth } from "better-auth";
+import { drizzleAdapter } from "better-auth/adapters/drizzle";
 
-import { db } from '../db'
-import { user } from '../db/auth-schema'
+import { db } from "../db";
+import {
+  accountTable,
+  sessionTable,
+  userTable,
+  verificationTable,
+} from "../db/auth-schema";
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
-    provider: 'pg',
+    provider: "pg",
     schema: {
-        user,
-    }
+      user: userTable,
+      session: sessionTable,
+      account: accountTable,
+      verification: verificationTable,
+    },
   }),
   // Allow requests from the frontend development server
-  trustedOrigins: ['http://localhost:5173'],
+  trustedOrigins: ["http://localhost:5173"],
   emailAndPassword: {
     enabled: true,
   },
@@ -22,9 +30,9 @@ export const auth = betterAuth({
     //   clientSecret: env.GOOGLE_CLIENT_SECRET,
     // },
   },
-})
+});
 
 export type AuthType = {
-  user: typeof auth.$Infer.Session.user | null
-  session: typeof auth.$Infer.Session.session | null
-}
+  user: typeof auth.$Infer.Session.user | null;
+  session: typeof auth.$Infer.Session.session | null;
+};
