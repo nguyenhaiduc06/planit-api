@@ -1,63 +1,95 @@
 import { Hono } from "hono";
-import { authMiddleware, requireAuth, type AuthVariables } from "../middlewares";
+import {
+  authMiddleware,
+  requireAuth,
+  type AuthVariables,
+} from "../middlewares";
 import { planService } from "../services";
+import {
+  listQuerySchema,
+  createPlanSchema,
+  updatePlanSchema,
+  idParamSchema,
+} from "../types";
+import { validated } from "../lib/validation";
+import { NotFoundError } from "../lib/errors";
 
 export const planRoute = new Hono<{ Variables: AuthVariables }>()
   .use(authMiddleware)
   .use(requireAuth);
 
-planRoute.get("/", async (c) => {
-  const user = c.get("user")!;
-  const page = Number(c.req.query("page")) || 1;
-  const limit = Number(c.req.query("limit")) || 20;
+planRoute.get(
+  "/",
+  validated("query", listQuerySchema),
+  async (c) => {
+    const user = c.get("user")!;
+    const { page, limit } = c.req.valid("query");
 
-  const { data, total } = await planService.listByUser(user.id, page, limit);
+    const { data, total } = await planService.listByUser(user.id, page, limit);
 
-  return c.json({
-    data,
-    pagination: {
-      page,
-      limit,
-      total,
-      totalPages: Math.ceil(total / limit),
-    },
-  });
-});
+    return c.json({
+      data,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    });
+  },
+);
 
-planRoute.get("/:id", async (c) => {
-  const id = c.req.param("id");
-  const planDetails = await planService.getById(id);
+planRoute.get(
+  "/:id",
+  validated("param", idParamSchema),
+  async (c) => {
+    const { id } = c.req.valid("param");
+    const planDetails = await planService.getById(id);
 
-  if (!planDetails) {
-    return c.json({ error: "Plan not found" }, 404);
-  }
+    if (!planDetails) {
+      throw new NotFoundError("Plan");
+    }
 
-  return c.json(planDetails);
-});
+    return c.json(planDetails);
+  },
+);
 
-planRoute.post("/", async (c) => {
-  const user = c.get("user")!;
-  const data = await c.req.json();
+planRoute.post(
+  "/",
+  validated("json", createPlanSchema),
+  async (c) => {
+    const user = c.get("user")!;
+    const data = c.req.valid("json");
 
-  const newPlan = await planService.create(data, user.id);
-  return c.json(newPlan, 201);
-});
+    const newPlan = await planService.create(data, user.id);
+    return c.json(newPlan, 201);
+  },
+);
 
-planRoute.put("/:id", async (c) => {
-  const id = c.req.param("id");
-  const data = await c.req.json();
+planRoute.put(
+  "/:id",
+  validated("param", idParamSchema),
+  validated("json", updatePlanSchema),
+  async (c) => {
+    const { id } = c.req.valid("param");
+    const data = c.req.valid("json");
 
-  const updated = await planService.update(id, data);
+    const updated = await planService.update(id, data);
 
-  if (!updated) {
-    return c.json({ error: "Plan not found" }, 404);
-  }
+    if (!updated) {
+      throw new NotFoundError("Plan");
+    }
 
-  return c.json(updated);
-});
+    return c.json(updated);
+  },
+);
 
-planRoute.delete("/:id", async (c) => {
-  const id = c.req.param("id");
-  await planService.delete(id);
-  return c.json({ success: true });
-});
+planRoute.delete(
+  "/:id",
+  validated("param", idParamSchema),
+  async (c) => {
+    const { id } = c.req.valid("param");
+    await planService.delete(id);
+    return c.json({ success: true });
+  },
+);

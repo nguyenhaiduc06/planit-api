@@ -32,8 +32,7 @@ export const requireAuth = createMiddleware<{
 }>(async (c, next) => {
   const user = c.get("user");
   if (!user) {
-    const error = new UnauthorizedError();
-    return c.json({ error: error.message }, 401);
+    throw new UnauthorizedError();
   }
   await next();
 });

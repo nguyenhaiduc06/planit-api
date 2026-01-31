@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 export type PlanRole = "owner" | "editor" | "viewer";
 
 export interface PlanWithRole {
@@ -31,7 +33,16 @@ export interface PlanDetails extends PlanWithRole {
   members: PlanMember[];
 }
 
-import { z } from 'zod';
+export const listQuerySchema = z.object({
+  page: z.coerce.number().min(1).default(1),
+  limit: z.coerce.number().min(1).max(100).default(20),
+});
+
+export type ListQueryInput = z.infer<typeof listQuerySchema>;
+
+export const idParamSchema = z.object({
+  id: z.string().uuid(),
+});
 
 export const createPlanSchema = z.object({
   title: z.string().min(1, 'Title is required').max(100, 'Title too long'),
