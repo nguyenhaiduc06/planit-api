@@ -2,7 +2,7 @@ import { Hono } from "hono";
 
 import { auth } from "@/lib/auth";
 import { AppError } from "@/lib/errors";
-import { planRoute, noteRoute } from "@/routes";
+import { planRoute, noteRoute, membersRoutes } from "@/routes";
 
 const app = new Hono()
 
@@ -23,6 +23,7 @@ app.on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw))
 
 app.route('/plans', planRoute);
 app.route('/notes', noteRoute);
+app.route('/plans/:id/members', membersRoutes);
 
 app.get('/', (c) => {
   return c.text('Hello Hono!')

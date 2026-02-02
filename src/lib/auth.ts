@@ -1,6 +1,6 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { bearer } from "better-auth/plugins";
+import { expo } from "@better-auth/expo";
 
 import {
   accountTable,
@@ -11,7 +11,7 @@ import {
 } from "@/db";
 
 export const auth = betterAuth({
-  plugins: [bearer()],
+  plugins: [expo()],
   database: drizzleAdapter(db, {
     provider: "pg",
     schema: {
@@ -22,7 +22,7 @@ export const auth = betterAuth({
     },
   }),
   // Allow requests from the frontend development server
-  trustedOrigins: ["http://localhost:5173"],
+  trustedOrigins: ['exp://*', 'planitapp://'],
   emailAndPassword: {
     enabled: true,
   },

@@ -1,0 +1,930 @@
+openapi: 3.1.0
+info:
+  title: Planit API
+  description: |
+    API for plans, notes, and plan members. Authentication is handled by [better-auth](https://www.better-auth.com) at `/api/auth/*` (sign-in, sign-up, session, sign-out). All other endpoints require a valid session (cookie or Bearer token).
+  version: 1.0.0
+
+servers:
+  - url: /
+    description: Relative to your deployment (e.g. https://api.example.com)
+
+tags:
+  - name: Plans
+    description: Create and manage plans
+  - name: Notes
+    description: Notes within plans (text, todo, calendar, location)
+  - name: Members
+    description: Plan members and invitations (nested under a plan)
+
+paths:
+  /:
+    get:
+      summary: Health / Hello
+      operationId: getRoot
+      responses:
+        "200":
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "Hello Hono!"
+
+  /api/auth/{path}:
+    get:
+      summary: Auth (GET)
+      description: Handled by better-auth (e.g. get session). See [better-auth API](https://www.better-auth.com/docs/concepts/api).
+      operationId: authGet
+      parameters:
+        - name: path
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Depends on endpoint
+    post:
+      summary: Auth (POST)
+      description: Handled by better-auth (e.g. sign-in/email, sign-up/email, sign-out). See [better-auth API](https://www.better-auth.com/docs/concepts/api).
+      operationId: authPost
+      parameters:
+        - name: path
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: Depends on endpoint
+
+  /plans:
+    get:
+      tags: [Plans]
+      summary: List my plans
+      operationId: listPlans
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/QueryPage"
+        - $ref: "#/components/parameters/QueryLimit"
+      responses:
+        "200":
+          description: Paginated list of plans
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, pagination]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/PlanWithRole"
+                  pagination:
+                    $ref: "#/components/schemas/Pagination"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      tags: [Plans]
+      summary: Create a plan
+      operationId: createPlan
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePlanBody"
+      responses:
+        "201":
+          description: Plan created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Plan"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/QuotaExceeded"
+
+  /plans/{id}:
+    parameters:
+      - $ref: "#/components/parameters/PlanId"
+    get:
+      tags: [Plans]
+      summary: Get plan by ID
+      operationId: getPlan
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Plan details including role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlanDetailsWithRole"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      tags: [Plans]
+      summary: Update plan
+      description: Requires editor or owner role.
+      operationId: updatePlan
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePlanBody"
+      responses:
+        "200":
+          description: Updated plan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlanWithRole"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Plans]
+      summary: Delete plan
+      description: Only owner can delete.
+      operationId: deletePlan
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Plan deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /plans/{id}/members:
+    parameters:
+      - $ref: "#/components/parameters/PlanId"
+    get:
+      tags: [Members]
+      summary: List plan members and pending invitations
+      operationId: listPlanMembers
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Members and pending invitations
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MembersWithInvitations"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      tags: [Members]
+      summary: Invite member
+      description: Owner only. Returns member (201) or pending invitation (202).
+      operationId: inviteMember
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InviteMemberBody"
+      responses:
+        "201":
+          description: User was already in system; member added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Member"
+        "202":
+          description: Invitation sent (user not yet registered)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: pending
+                  email:
+                    type: string
+                  role:
+                    type: string
+                  message:
+                    type: string
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "429":
+          $ref: "#/components/responses/QuotaExceeded"
+
+  /plans/{id}/members/{userId}:
+    parameters:
+      - $ref: "#/components/parameters/PlanId"
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    put:
+      tags: [Members]
+      summary: Update member role
+      description: Owner only.
+      operationId: updateMemberRole
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateMemberRoleBody"
+      responses:
+        "200":
+          description: Updated member
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Member"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Members]
+      summary: Remove member or leave plan
+      description: Owner can remove anyone except themselves; members can remove themselves (leave).
+      operationId: removeMember
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Member removed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /plans/{id}/members/invitations/{email}:
+    parameters:
+      - $ref: "#/components/parameters/PlanId"
+      - name: email
+        in: path
+        required: true
+        schema:
+          type: string
+          format: email
+        description: URL-encoded email of the pending invitation
+    delete:
+      tags: [Members]
+      summary: Cancel pending invitation
+      description: Owner only.
+      operationId: cancelInvitation
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Invitation cancelled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /notes:
+    post:
+      tags: [Notes]
+      summary: Create a note
+      operationId: createNote
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateNoteBody"
+      responses:
+        "201":
+          description: Note created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Note"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/QuotaExceeded"
+
+  /notes/plan/{planId}:
+    parameters:
+      - name: planId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [Notes]
+      summary: List notes for a plan
+      operationId: listNotesByPlan
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/QueryPage"
+        - $ref: "#/components/parameters/QueryLimit"
+      responses:
+        "200":
+          description: List of notes
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Note"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /notes/{id}:
+    parameters:
+      - $ref: "#/components/parameters/NoteId"
+    get:
+      tags: [Notes]
+      summary: Get note by ID
+      operationId: getNote
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Note details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Note"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      tags: [Notes]
+      summary: Update note
+      description: Requires editor or owner role on the plan.
+      operationId: updateNote
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateNoteBody"
+      responses:
+        "200":
+          description: Updated note
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Note"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Notes]
+      summary: Delete note
+      description: Requires editor or owner role.
+      operationId: deleteNote
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Note deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Session token from better-auth (Bearer or cookie)
+
+  parameters:
+    PlanId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Plan ID
+    NoteId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Note ID
+    QueryPage:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    QueryLimit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+
+  schemas:
+    Plan:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        userId:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    PlanWithRole:
+      allOf:
+        - $ref: "#/components/schemas/Plan"
+        - type: object
+          properties:
+            role:
+              type: string
+              enum: [owner, editor, viewer]
+    PlanDetailsWithRole:
+      allOf:
+        - $ref: "#/components/schemas/PlanWithRole"
+        - type: object
+          properties:
+            notes:
+              type: array
+              items:
+                $ref: "#/components/schemas/PlanNote"
+            members:
+              type: array
+              items:
+                $ref: "#/components/schemas/PlanMember"
+    PlanNote:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [text, todo, calendar, location]
+        content:
+          type: object
+        userId:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    PlanMember:
+      type: object
+      properties:
+        userId:
+          type: string
+          format: uuid
+        email:
+          type: string
+        name:
+          type: string
+          nullable: true
+        role:
+          type: string
+          enum: [owner, editor, viewer]
+    CreatePlanBody:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 500
+    UpdatePlanBody:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 500
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        totalPages:
+          type: integer
+
+    Member:
+      type: object
+      properties:
+        userId:
+          type: string
+          format: uuid
+        email:
+          type: string
+        name:
+          type: string
+          nullable: true
+        role:
+          type: string
+          enum: [owner, editor, viewer]
+        joinedAt:
+          type: string
+          format: date-time
+    PendingInvitation:
+      type: object
+      properties:
+        email:
+          type: string
+        role:
+          type: string
+          enum: [editor, viewer]
+        invitedAt:
+          type: string
+          format: date-time
+    MembersWithInvitations:
+      type: object
+      properties:
+        members:
+          type: array
+          items:
+            $ref: "#/components/schemas/Member"
+        pendingInvitations:
+          type: array
+          items:
+            $ref: "#/components/schemas/PendingInvitation"
+    InviteMemberBody:
+      type: object
+      required: [email, role]
+      properties:
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum: [editor, viewer]
+    UpdateMemberRoleBody:
+      type: object
+      required: [role]
+      properties:
+        role:
+          type: string
+          enum: [editor, viewer]
+
+    Note:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        planId:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [text, todo, calendar, location]
+        content:
+          type: object
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    CreateNoteBody:
+      oneOf:
+        - type: object
+          required: [planId, type, content]
+          properties:
+            planId:
+              type: string
+              format: uuid
+            type:
+              type: string
+              enum: [text]
+            content:
+              type: object
+              required: [title]
+              properties:
+                title:
+                  type: string
+                  minLength: 1
+                  maxLength: 200
+                text:
+                  type: string
+                  maxLength: 10000
+                  default: ""
+        - type: object
+          required: [planId, type, content]
+          properties:
+            planId:
+              type: string
+              format: uuid
+            type:
+              type: string
+              enum: [todo]
+            content:
+              type: object
+              required: [title]
+              properties:
+                title:
+                  type: string
+                  minLength: 1
+                  maxLength: 200
+                items:
+                  type: array
+                  maxItems: 100
+                  items:
+                    type: object
+                    required: [id, text, completed]
+                    properties:
+                      id:
+                        type: string
+                      text:
+                        type: string
+                        minLength: 1
+                        maxLength: 500
+                      completed:
+                        type: boolean
+        - type: object
+          required: [planId, type, content]
+          properties:
+            planId:
+              type: string
+              format: uuid
+            type:
+              type: string
+              enum: [calendar]
+            content:
+              type: object
+              required: [title]
+              properties:
+                title:
+                  type: string
+                  minLength: 1
+                  maxLength: 200
+                startDate:
+                  type: string
+                  format: date-time
+                endDate:
+                  type: string
+                  format: date-time
+                allDay:
+                  type: boolean
+                  default: false
+        - type: object
+          required: [planId, type, content]
+          properties:
+            planId:
+              type: string
+              format: uuid
+            type:
+              type: string
+              enum: [location]
+            content:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 200
+                address:
+                  type: string
+                  maxLength: 500
+                coordinates:
+                  type: object
+                  properties:
+                    latitude:
+                      type: number
+                      minimum: -90
+                      maximum: 90
+                    longitude:
+                      type: number
+                      minimum: -180
+                      maximum: 180
+                notes:
+                  type: string
+                  maxLength: 1000
+    UpdateNoteBody:
+      type: object
+      required: [content]
+      properties:
+        content:
+          type: object
+          description: Partial content matching the note type (text/todo/calendar/location)
+
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+          nullable: true
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            code: VALIDATION_ERROR
+            message: Validation failed
+            details: []
+    ValidationError:
+      description: Validation failed (400)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Unauthorized:
+      description: Not authenticated (401)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            code: UNAUTHORIZED
+            message: Authentication required
+    Forbidden:
+      description: No permission (403)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            code: FORBIDDEN
+            message: You don't have permission to perform this action
+    NotFound:
+      description: Resource not found (404)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            code: NOT_FOUND
+            message: Plan not found
+    Conflict:
+      description: Conflict (409)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    QuotaExceeded:
+      description: Quota exceeded (429)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+            example:
+              code: QUOTA_EXCEEDED
+              message: Maximum number of plans reached
+              details:
+                limit: 50
+                current: 50
+                resource: plans
