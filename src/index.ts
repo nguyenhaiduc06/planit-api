@@ -1,10 +1,14 @@
 import { Hono } from "hono";
+import { logger } from 'hono/logger'
+
 
 import { auth } from "@/lib/auth";
 import { AppError } from "@/lib/errors";
 import { planRoute, noteRoute, membersRoutes } from "@/routes";
 
 const app = new Hono()
+
+app.use(logger())
 
 app.onError((err, c) => {
   if (err instanceof AppError) {
